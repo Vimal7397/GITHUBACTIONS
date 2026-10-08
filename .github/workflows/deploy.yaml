@@ -28,7 +28,7 @@ jobs:
       - name: Build WAR using Maven
         run: mvn clean package -DskipTests
 
-            - name: Deploy WAR to Tomcat
+      - name: Deploy WAR to Tomcat
         shell: powershell
         env:
           TOMCAT_USER: ${{ secrets.TOMCAT_USERNAME }}
