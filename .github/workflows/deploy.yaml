@@ -28,7 +28,7 @@ jobs:
       - name: Build WAR using Maven
         run: mvn clean package -DskipTests
 
-      - name: Deploy WAR to Tomcat
+            - name: Deploy WAR to Tomcat
         shell: powershell
         env:
           TOMCAT_USER: ${{ secrets.TOMCAT_USERNAME }}
@@ -38,14 +38,19 @@ jobs:
           $war = (Get-ChildItem target\*.war | Select-Object -First 1).FullName
           $app = "TEST"
           Write-Host "Deploying $war"
+          Write-Host "Host length: $($env:TOMCAT_HOST.Length)"
 
-          $response = curl.exe -s -u "${env:TOMCAT_USER}:${env:TOMCAT_PASS}" `
+          curl.exe -sS -m 120 -u "${env:TOMCAT_USER}:${env:TOMCAT_PASS}" `
             --upload-file "$war" `
+            -o response.txt -w "HTTP status: %{http_code}`n" `
             "http://${env:TOMCAT_HOST}:8080/manager/text/deploy?path=/$app&update=true"
+          $curlExit = $LASTEXITCODE
+          Write-Host "curl exit code: $curlExit"
 
-          $text = $response -join "`n"
-          Write-Host $text
-          if (-not $text.StartsWith("OK")) { exit 1 }
+          if (Test-Path response.txt) { Get-Content response.txt }
+
+          if ($curlExit -ne 0) { exit 1 }
+          if (-not (Select-String -Path response.txt -Pattern "^OK" -Quiet)) { exit 1 }
 
       - name: Verify app is up
         shell: powershell
