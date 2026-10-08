@@ -17,8 +17,8 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       - name: Set up Maven
         uses: stCarolas/setup-maven@v5
@@ -57,6 +57,12 @@ jobs:
         env:
           TOMCAT_HOST: ${{ secrets.TOMCAT_HOST }}
         run: |
-          Start-Sleep -Seconds 10
-          curl.exe -f -s -o NUL "http://${env:TOMCAT_HOST}:8080/TEST/"
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $url = "http://${env:TOMCAT_HOST}:8080/TEST/"
+          $ok = $false
+          for ($i = 1; $i -le 12; $i++) {
+            Start-Sleep -Seconds 5
+            $code = curl.exe -s -o NUL -w "%{http_code}" $url
+            Write-Host "Attempt $i : HTTP $code"
+            if ($code -match "^(2|3)\d\d$") { $ok = $true; break }
+          }
+          if (-not $ok) { Write-Host "App did not return success. Check Tomcat logs."; exit 1 }
